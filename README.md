@@ -32,6 +32,13 @@ cv-job-matcher/
 
 ---
 
+## 0 · Quickest possible deploy — one file
+
+If uploading folders to GitHub is a hassle, `dist/index.html` is the **whole app in a single file** (CSS, JS and the
+sample CV inlined). Upload just that file as `index.html` to the repository root, enable Pages
+(**Settings → Pages → Deploy from a branch → main / root**) and you're live. Everything works except the cached feed
+(`data/jobs.json`), which you can add later by uploading the `data` folder. Rebuild it with `npm run build:single`.
+
 ## 1 · Deploy to GitHub Pages (5 minutes)
 
 1. Create a new repository on GitHub (public or private — Pages works for both on paid plans; public on free).
