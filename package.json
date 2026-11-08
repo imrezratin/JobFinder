@@ -1,0 +1,17 @@
+{
+  "name": "cv-job-matcher",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Upload a CV, fetch Bangladesh & remote jobs, see an explainable match % — static site for GitHub Pages.",
+  "type": "module",
+  "scripts": {
+    "build": "npx --yes esbuild@0.24.0 js/app.js --bundle --format=iife --target=es2020 --loader:.txt=text --outfile=js/app.bundle.js --legal-comments=none",
+    "watch": "npm run build -- --watch",
+    "fetch": "node scripts/fetch-jobs.mjs",
+    "serve": "npx serve ."
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CV ⇄ Job Matcher — Bangladesh & Remote</title>
+  <meta name="description" content="Upload your CV, pull live job listings for Bangladesh and remote roles, and see an explainable match % for every job. Runs entirely in your browser.">
+  <meta name="theme-color" content="#0f766e">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="./">
+        <img src="assets/favicon.svg" alt="" width="28" height="28">
+        <span>CV ⇄ Job Matcher</span>
+        <span class="brand-sub">Bangladesh &amp; Remote</span>
+      </a>
+      <nav class="tabs" aria-label="Sections">
+        <button type="button" class="tab active" data-view="matches">Matches</button>
+        <button type="button" class="tab" data-view="saved">Saved <span class="pill" id="saved-count">0</span></button>
+        <button type="button" class="tab" data-view="boards">Job boards</button>
+        <button type="button" class="tab" data-view="paste">Score a posting</button>
+      </nav>
+      <div class="topbar-actions">
+        <button type="button" id="theme-toggle" class="icon-btn" title="Toggle dark mode" aria-label="Toggle dark mode">◐</button>
+        <a class="icon-btn" href="https://github.com/" id="gh-link" title="Source on GitHub" aria-label="GitHub repository" target="_blank" rel="noopener">⌥</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- ================================================== MATCHES -->
+    <section data-panel="matches">
+      <div class="hero">
+        <h1>Find the jobs you actually fit.</h1>
+        <p>Upload your CV once. The matcher reads your skills, roles and seniority, pulls live openings in <strong>Bangladesh</strong> and <strong>remote-friendly</strong> roles worldwide, and scores every posting with an explainable <strong>match&nbsp;%</strong>.</p>
+        <p class="privacy">🔒 Your CV is parsed <em>inside your browser</em> and stored only in this browser's local storage. Nothing is uploaded to any server.</p>
+        <p id="welcome-back" class="note" hidden></p>
+        <p id="file-note" class="note" hidden>You opened this page from a local file. Everything works except the cached job feed (<code>data/jobs.json</code>) — live sources (Jobicy, RemoteOK, Arbeitnow, JSearch) still load. Deploy to GitHub Pages or run <code>npx serve .</code> to get the full feed.</p>
+      </div>
+
+      <!-- Step 1 -->
+      <section class="card step" id="upload-section">
+        <div class="step-head"><span class="step-n">1</span><h2>Upload your CV</h2></div>
+        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Upload CV">
+          <div class="dz-icon">📄</div>
+          <div class="dz-text"><strong>Drop your CV here</strong> or <label for="cv-file" class="link">browse</label><br><span class="muted">PDF, DOCX, TXT or Markdown · max 15 MB</span></div>
+          <input type="file" id="cv-file" accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" hidden>
+          <div class="busy-label"></div>
+        </div>
+        <div class="row gap">
+          <button type="button" class="btn" id="toggle-paste">Paste CV text instead</button>
+          <button type="button" class="btn btn-ghost" id="use-sample">Try with a sample CV</button>
+        </div>
+        <div id="paste-wrap" hidden>
+          <textarea id="cv-paste" rows="10" placeholder="Paste the full text of your CV here…"></textarea>
+          <button type="button" class="btn btn-primary" id="use-paste">Build profile from text</button>
+        </div>
+      </section>
+
+      <!-- Step 2 -->
+      <section class="card step" id="profile-section" hidden>
+        <div class="step-head"><span class="step-n">2</span><h2>Review your profile</h2><span class="muted small">Edit anything — scores update instantly.</span><button type="button" class="btn btn-ghost right" id="reset-profile">Remove profile</button></div>
+        <div class="profile-grid">
+          <div>
+            <h3 id="p-name" class="p-name"></h3>
+            <div id="p-meta" class="p-meta"></div>
+            <div class="field-row">
+              <label>Years of experience <input type="number" id="p-years" min="0" max="45" step="0.5"></label>
+              <label>Seniority <select id="p-level"></select></label>
+            </div>
+            <h4>Education &amp; certifications</h4>
+            <div id="p-edu" class="chips"></div>
+            <h4>Target job titles <span class="muted small">(one per line — used for searches and title matching)</span></h4>
+            <textarea id="p-titles" rows="4" placeholder="Senior Business Analyst&#10;ERP Implementation Manager"></textarea>
+          </div>
+          <div>
+            <h4>Role families detected <span class="muted small">(toggle to adjust)</span></h4>
+            <div id="p-roles" class="chips wrap-chips"></div>
+            <h4>Industry background</h4>
+            <div id="p-domains" class="chips wrap-chips"></div>
+          </div>
+        </div>
+        <h4>Skills detected (<span id="p-skill-count">0</span>) <span class="muted small">— hover a chip to see where it was found; × to remove</span></h4>
+        <div id="p-skills" class="skills"></div>
+        <div class="row gap">
+          <input list="skill-options" id="add-skill" placeholder="Add a skill (e.g. Power BI, SAP, UAT)…">
+          <datalist id="skill-options"></datalist>
+          <button type="button" class="btn" id="add-skill-btn">Add</button>
+        </div>
+        <h4>Where would you work?</h4>
+        <div class="prefs">
+          <label><input type="checkbox" id="pref-bd"> Jobs in Bangladesh (on-site / hybrid)</label>
+          <label><input type="checkbox" id="pref-remote"> Remote — worldwide or Asia-friendly</label>
+          <label><input type="checkbox" id="pref-restricted"> Also show remote jobs locked to other regions (USA/EU only…)</label>
+          <label><input type="checkbox" id="pref-relocate"> Open to relocating abroad (on-site)</label>
+          <label><input type="checkbox" id="pref-relevance"> Only analyse jobs that mention my roles or skills <span class="muted small">(recommended — removes sales, design, nursing… noise)</span></label>
+        </div>
+      </section>
+
+      <!-- Step 3 -->
+      <section class="card step" id="sources-section" hidden>
+        <div class="step-head"><span class="step-n">3</span><h2>Fetch jobs</h2></div>
+        <p class="muted">Choose the sources to query. Live sources are fetched directly from your browser; the cached feed is refreshed by a GitHub Action in this repository (see README). Bangladesh-specific boards without an API are one click away in the <button type="button" class="link" data-view="boards">Job boards</button> tab.</p>
+        <div id="source-list" class="sources"></div>
+        <div id="jsearch-key-wrap" class="key-wrap" hidden>
+          <label>RapidAPI key for JSearch <input type="password" id="jsearch-key" placeholder="paste your x-rapidapi-key" autocomplete="off"></label>
+          <span class="muted small">Stored only in this browser. Get a free key at <a href="https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch" target="_blank" rel="noopener">rapidapi.com → JSearch</a>. Each search uses ~6 requests.</span>
+        </div>
+        <div class="row gap">
+          <button type="button" class="btn btn-primary btn-lg" id="find-jobs">🔎 Find matching jobs</button>
+          <button type="button" class="btn" id="add-manual-btn">+ Add a job manually</button>
+          <span id="fetch-progress" class="muted" hidden></span>
+        </div>
+      </section>
+
+      <!-- Results -->
+      <section class="card" id="results-section" hidden>
+        <div class="step-head"><span class="step-n">4</span><h2>Your matches</h2><span class="muted small" id="cache-note"></span></div>
+        <div id="stats" class="stats"></div>
+        <p id="bd-hint" class="note" hidden></p>
+
+        <div class="two-col">
+          <div class="panel">
+            <h4>Match distribution <span class="muted small">(jobs per 10-point band)</span></h4>
+            <div id="dist" class="dist" role="img" aria-label="Histogram of match percentages"></div>
+            <p class="muted small" id="weights-info"></p>
+          </div>
+          <div class="panel">
+            <h4>Skill gaps <span class="muted small">— most-requested skills missing from your CV (top 60 jobs)</span></h4>
+            <div id="gaps" class="gaps"></div>
+          </div>
+        </div>
+
+        <div class="filters">
+          <input type="search" id="f-q" placeholder="Search title, company, location…">
+          <select id="f-loc">
+            <option value="all">All locations</option>
+            <option value="bd">🇧🇩 Bangladesh</option>
+            <option value="remote">Remote (any)</option>
+            <option value="remote-ww">Remote · worldwide / Asia-friendly</option>
+          </select>
+          <select id="f-band">
+            <option value="all">All bands</option>
+            <option value="strong">Strong (≥75)</option>
+            <option value="good">Good (55–74)</option>
+            <option value="fair">Fair (35–54)</option>
+            <option value="weak">Weak (&lt;35)</option>
+          </select>
+          <select id="f-source"><option value="all">All sources</option></select>
+          <select id="f-posted">
+            <option value="all">Any date</option>
+            <option value="3">Last 3 days</option>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+          </select>
+          <select id="f-sort">
+            <option value="match">Sort: best match</option>
+            <option value="date">Sort: newest</option>
+            <option value="company">Sort: company</option>
+          </select>
+          <label class="range">Min match <input type="range" id="f-min" min="0" max="90" step="5"><span id="f-min-v">40%</span></label>
+        </div>
+        <div class="row between">
+          <strong id="result-count"></strong>
+          <div class="row gap">
+            <button type="button" class="btn btn-ghost" id="unhide-all">Unhide all</button>
+            <button type="button" class="btn" id="export-csv">Export CSV</button>
+            <button type="button" class="btn" id="export-json">Export JSON</button>
+          </div>
+        </div>
+        <div id="job-list" class="jobs"></div>
+        <button type="button" class="btn btn-lg center" id="load-more" hidden>Load more</button>
+      </section>
+    </section>
+
+    <!-- ================================================== SAVED -->
+    <section data-panel="saved" hidden>
+      <section class="card">
+        <div class="step-head"><h2>Saved jobs</h2><button type="button" class="btn right" id="export-saved">Export CSV</button></div>
+        <p class="muted">Jobs you starred. Scores are recalculated whenever your profile changes.</p>
+        <div id="saved-list" class="jobs"></div>
+      </section>
+    </section>
+
+    <!-- ================================================== BOARDS -->
+    <section data-panel="boards" hidden>
+      <section class="card">
+        <div class="step-head"><h2>Job boards without an API</h2></div>
+        <p class="muted">BDJobs, LinkedIn, Indeed and friends don't offer a public API, so these links open a search already filled with your target title. Found something good? Use <button type="button" class="link" data-view="paste">Score a posting</button> to see how well it matches.</p>
+        <label class="field">Search keyword <input type="text" id="boards-q"></label>
+        <div id="boards"></div>
+      </section>
+    </section>
+
+    <!-- ================================================== PASTE -->
+    <section data-panel="paste" hidden>
+      <section class="card">
+        <div class="step-head"><h2>Score any job posting</h2></div>
+        <p class="muted">Paste a job description from BDJobs, LinkedIn, an email — anything — and get the same explainable match % plus the skills you're missing.</p>
+        <div class="field-row">
+          <label>Job title <input type="text" id="jd-title" placeholder="Senior Business Analyst"></label>
+          <label>Company <input type="text" id="jd-company" placeholder="Company name"></label>
+          <label>Location <input type="text" id="jd-location" placeholder="Dhaka, Bangladesh / Remote"></label>
+          <label>URL <input type="url" id="jd-url" placeholder="https://…"></label>
+        </div>
+        <textarea id="jd-text" rows="12" placeholder="Paste the full job description here…"></textarea>
+        <button type="button" class="btn btn-primary" id="score-paste">Score this posting</button>
+        <div id="paste-result" class="jobs" hidden></div>
+      </section>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    <p><strong>How the match % works.</strong> Skills found in the posting are compared with skills found in your CV (weighted; title mentions count double). Role fit checks whether the job title belongs to one of your role families (adjacent families get partial credit). Seniority compares the posting's level with your years. Location rewards Bangladesh and worldwide/Asia-friendly remote roles. Industry and title similarity add small bonuses. Hover the "Why ?%" panel on any job for the breakdown.</p>
+    <p>Job data courtesy of <a href="https://remotive.com" target="_blank" rel="noopener">Remotive</a>, <a href="https://jobicy.com" target="_blank" rel="noopener">Jobicy</a>, <a href="https://himalayas.app" target="_blank" rel="noopener">Himalayas</a>, <a href="https://remoteok.com" target="_blank" rel="noopener">RemoteOK</a>, <a href="https://www.arbeitnow.com" target="_blank" rel="noopener">Arbeitnow</a>, <a href="https://www.themuse.com" target="_blank" rel="noopener">The Muse</a> and, when configured, JSearch / Jooble. Listings belong to their original publishers — always apply via the original link.</p>
+    <p class="small">Open source · MIT · <button type="button" class="link" id="clear-all">Clear all data stored by this app</button></p>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <dialog id="manual-dialog" class="dialog">
+    <form id="manual-form" method="dialog">
+      <h3>Add a job manually</h3>
+      <label>Title <input name="title" required></label>
+      <label>Company <input name="company"></label>
+      <label>Location <input name="location" placeholder="Dhaka / Remote"></label>
+      <label>URL <input name="url" type="url" placeholder="https://…"></label>
+      <label>Description <textarea name="description" rows="8" required></textarea></label>
+      <div class="row gap right-align">
+        <button type="button" class="btn" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Add &amp; score</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="cover-dialog" class="dialog">
+    <h3>Cover-letter bullets</h3>
+    <p class="muted small" id="cover-title"></p>
+    <textarea id="cover-body" rows="12"></textarea>
+    <div class="row gap right-align">
+      <button type="button" class="btn" data-close>Close</button>
+      <button type="button" class="btn btn-primary" id="cover-copy">Copy</button>
+    </div>
+  </dialog>
+
+  <!-- Bundled by `npm run build` (esbuild) so the page also works when opened as a local file. Source: js/app.js -->
+  <script src="js/app.bundle.js"></script>
+</body>
+</html>
